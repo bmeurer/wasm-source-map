@@ -77,3 +77,72 @@ impl<'a> Path<'a> {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  pub fn test_is_absolute_empty() {
+    assert!(!is_absolute(""));
+  }
+
+  #[test]
+  pub fn test_is_absolute_unix() {
+    assert!(is_absolute("/"));
+    assert!(is_absolute("/sbin"));
+    assert!(is_absolute("/home/user"));
+    assert!(!is_absolute(""));
+    assert!(!is_absolute("usr/local"));
+  }
+
+  #[test]
+  pub fn test_is_absolute_windows() {
+    assert!(is_absolute("a:\\"));
+    assert!(is_absolute("A:\\"));
+    assert!(is_absolute("c:\\Windows\\System32"));
+    assert!(is_absolute("C:\\Windows\\System32"));
+    assert!(!is_absolute("\\User"));
+    assert!(!is_absolute("User\\Someone Special"));
+  }
+
+  #[test]
+  pub fn test_path_unix() {
+    let mut path = Path::new(Cow::from("/"));
+    path.push(Cow::from("etc"));
+    path.push(Cow::from("passwd"));
+    assert_eq!(path.to_uri(), "file:///etc/passwd");
+
+    let mut path = Path::new(Cow::from("/etc"));
+    path.push(Cow::from("passwd"));
+    path.push(Cow::from("/etc/hosts"));
+    assert_eq!(path.to_uri(), "file:///etc/hosts");
+  }
+
+  #[test]
+  pub fn test_path_windows() {
+    let mut path = Path::new(Cow::from("C:\\"));
+    path.push(Cow::from("Windows"));
+    path.push(Cow::from("System32"));
+    assert_eq!(path.to_uri(), "file:///C:\\Windows\\System32");
+
+    let mut path = Path::new(Cow::from("\\\\"));
+    path.push(Cow::from("Server"));
+    path.push(Cow::from("Share"));
+    assert_eq!(path.to_uri(), "file:///\\\\Server\\Share");
+
+    let mut path = Path::new(Cow::from("a:\\"));
+    path.push(Cow::from("Folder"));
+    path.push(Cow::from("F:\\Directory\\File.html"));
+    assert_eq!(path.to_uri(), "file:///F:\\Directory\\File.html");
+  }
+
+  #[test]
+  pub fn test_path_rustc() {
+    let path = Path::new(Cow::from("/rustc/folder/file.rs"));
+    assert_eq!(
+      path.to_uri(),
+      "https://raw.githubusercontent.com/rust-lang/rust/folder/file.rs"
+    );
+  }
+}
